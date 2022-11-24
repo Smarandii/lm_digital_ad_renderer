@@ -15,6 +15,7 @@ class SizeDirectory:
         self.jpg_dir_path = jpg
         self.mp4_dir_path = mp4
         self.ai_dir_path = ai
+        self.root = root
 
 
 class MainWindow(QMainWindow):
