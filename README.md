@@ -6,7 +6,8 @@
 _Root directory name: Image size
 Inside of root directory directories (JPG, Видео, Исходники)_
 Example:
-```720x360 -
+```
+720x360 -
 	 |
 	  - Исходники
 	  - JPG
