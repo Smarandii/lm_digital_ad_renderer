@@ -149,6 +149,12 @@ class MainWindow(QMainWindow):
                     self.stats['digitals'] += 1
                 if dir.capitalize() == "Принт":
                     self.stats['prints'] += 1
+            for file in files:
+                if ".ai" in file:
+                    self.stats['digitals'] += 1
+                if '.eps' in file:
+                    self.stats['prints'] += 1
+                    self.stats['digitals'] -= 1
         self.display_statistic()
 
 
