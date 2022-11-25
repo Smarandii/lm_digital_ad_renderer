@@ -1,11 +1,13 @@
 import pathlib
 import shutil
 
+from PIL import Image
+
 from yoba_automization import yo
 
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import QSize, QPoint
-from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog, QWidget
+from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog, QWidget, QMessageBox
 import sys
 import os
 
@@ -83,12 +85,28 @@ class MainWindow(QMainWindow):
                pass
             return SizeDirectory(jpg_dir_path, mp4_dir_path, ai_dir_path, size_dir_path)
 
+    @staticmethod
+    def check_size(size: tuple):
+        return size[0] % 2 == 0 and size[1] % 2 == 0
+
+    def check_pixels(self, file_path, file_name):
+        img_file = Image.open(fp=file_path)
+        if self.check_size(img_file.size) is False:
+            warning = QMessageBox()
+            warning.setIcon(QMessageBox.Critical)
+            warning.setText(f"{file_name} кажется в .jpg файле есть лишние пиксели!")
+            warning.setInformativeText(f"Путь к файлу: {file_path}")
+            warning.setWindowTitle(f"Лишние пиксели в {file_name}!")
+            warning.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
+            warning.exec_()
+
     def complex_digital_render(self):
         for root, dirs, files in os.walk(self.working_directory):
             for file_name in files:
                 size_dir = self.create_directory(file_name)
                 file_path = os.path.join(pathlib.Path(root), file_name)
                 if '.jpg' in file_name:
+                    self.check_pixels(file_path, file_name)
                     shutil.move(file_path, size_dir.jpg_dir_path)
                     render_attributes = self.parse_file_name(str(file_path))
                     input_file_path = os.path.join(size_dir.jpg_dir_path, file_name)
@@ -117,6 +135,7 @@ class MainWindow(QMainWindow):
         for root, dirs, files in os.walk(self.working_directory):
             if "JPG" == root[-3::]:
                 jpg_path = os.path.join(pathlib.Path(root), files[0])
+                self.check_pixels(jpg_path, files[0])
                 render_attributes = self.parse_file_name(str(jpg_path))
                 mp4_path = os.path.join(pathlib.Path(root).parent, "Видео", files[0].replace('jpg', 'mp4'))
                 size = yo.Size(input_file_path=jpg_path,
