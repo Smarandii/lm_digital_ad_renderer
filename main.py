@@ -10,6 +10,8 @@ from PyQt5.QtCore import QSize, QPoint
 from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog, QWidget, QMessageBox
 import sys
 import os
+from loguru import logger
+logger.add('debug.log', format='{time} {level} {message}', level='DEBUG', rotation='10 KB', compression='zip')
 
 
 class SizeDirectory:
@@ -28,7 +30,6 @@ class MainWindow(QMainWindow):
 
     def _add_label(self, label_name: str, text: str = None, point: QPoint = None):
         setattr(self, label_name, QtWidgets.QLabel(self))
-        print(label_name)
         if text:
             self.__getattribute__(label_name).setText(text)
             self.__getattribute__(label_name).adjustSize()
@@ -75,7 +76,7 @@ class MainWindow(QMainWindow):
             mp4_dir_path = os.path.join(size_dir_path, "Видео")
             jpg_dir_path = os.path.join(size_dir_path, "JPG")
             ai_dir_path = os.path.join(size_dir_path, "Исходники")
-            print("CREATING\n", size_dir_path, "\n", mp4_dir_path, "\n", jpg_dir_path, "\n", ai_dir_path)
+            logger.debug("CREATING\n", size_dir_path, "\n", mp4_dir_path, "\n", jpg_dir_path, "\n", ai_dir_path)
             try:
                 os.mkdir(size_dir_path)
                 os.mkdir(mp4_dir_path)
@@ -94,7 +95,7 @@ class MainWindow(QMainWindow):
         if self.check_size(img_file.size) is False:
             warning = QMessageBox()
             warning.setIcon(QMessageBox.Critical)
-            warning.setText(f"{file_name} кажется в .jpg файле есть лишние пиксели!")
+            warning.setText(f"{file_name} кажется в .jpg файле есть лишние пиксели!\n(Или в разрешении есть нечетное число)")
             warning.setInformativeText(f"Путь к файлу: {file_path}")
             warning.setWindowTitle(f"Лишние пиксели в {file_name}!")
             warning.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
@@ -169,12 +170,13 @@ class MainWindow(QMainWindow):
                     self.stats['digitals'] += 1
                 if dir.capitalize() == "Принт":
                     self.stats['prints'] += 1
-            for file in files:
-                if ".ai" in file:
-                    self.stats['digitals'] += 1
-                if '.eps' in file:
-                    self.stats['prints'] += 1
-                    self.stats['digitals'] -= 1
+            if self.stats['digitals'] == 0:
+                for file in files:
+                    if ".ai" in file:
+                        self.stats['digitals'] += 1
+                    if '.eps' in file:
+                        self.stats['prints'] += 1
+                        self.stats['digitals'] -= 1
         self.display_statistic()
 
 

@@ -17,3 +17,4 @@ PythonQwt==0.10.2
 pywin32-ctypes==0.2.0
 QtPy==2.3.0
 scipy==1.9.3
+loguru
