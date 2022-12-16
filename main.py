@@ -3,7 +3,7 @@ import shutil
 
 from PIL import Image
 
-from yoba_automization import yo
+from ffmpeg.ffmpeg_api import FfmpegGenerator
 
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import QPoint
@@ -122,9 +122,9 @@ class MainWindow(QMainWindow):
                     shutil.move(file_path, size_dir.jpg_dir_path)
                     render_attributes = self.parse_file_name(str(file_path))
                     input_file_path = os.path.join(size_dir.jpg_dir_path, file_name)
-                    size = yo.FfmpegGenerator(input_file_path=input_file_path,
-                                              video_extension=render_attributes['extension'],
-                                              video_duration=render_attributes['duration'])
+                    size = FfmpegGenerator(input_file_path=input_file_path,
+                                           video_extension=render_attributes['extension'],
+                                           video_duration=render_attributes['duration'])
                     try:
                         size.create_preview()
                         size.render_video()
@@ -150,9 +150,9 @@ class MainWindow(QMainWindow):
                 jpg_path = os.path.join(pathlib.Path(root), files[0])
                 self.check_pixels(jpg_path, files[0])
                 render_attributes = self.parse_file_name(str(jpg_path))
-                size = yo.FfmpegGenerator(input_file_path=jpg_path,
-                                          video_extension=render_attributes['extension'],
-                                          video_duration=render_attributes['duration'])
+                size = FfmpegGenerator(input_file_path=jpg_path,
+                                       video_extension=render_attributes['extension'],
+                                       video_duration=render_attributes['duration'])
                 try:
                     size.create_preview()
                     size.render_video()
