@@ -1,18 +1,13 @@
 import pathlib
 import shutil
-
 from PIL import Image
-
 from ffmpeg.ffmpeg_api import FfmpegGenerator
-
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import QPoint
 from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog, QMessageBox
 import sys
 import os
-from loguru import logger
-
-logger.add('debug.log', format='{time} {level} {message}', level='DEBUG', rotation='10 KB', compression='zip')
+from loguru import logger as log
 
 
 class SizeDirectory:
@@ -24,9 +19,12 @@ class SizeDirectory:
 
 
 class MainWindow(QMainWindow):
-    def __init__(self):
+    def __init__(self, logger):
         super(MainWindow, self).__init__()
+        self.logger = logger
         self.working_directory = None
+        self.bad_jpg_warning = None
+        self.path_window = None
         self._init_ui()
         self.default_render_attributes = {'extension': 'mp4', 'duration': 5, 'fade': False}
         self.stats = {'digitals': 0,
@@ -50,7 +48,27 @@ class MainWindow(QMainWindow):
         if on_click:
             self.__getattribute__(button_name).clicked.connect(on_click)
 
+    def _invoke_window(self, window_name: str):
+        setattr(self, window_name, QMainWindow())
+
+    def _add_message_box(self, box_name: str, text: str, inf_text: str, title: str, icon: QMessageBox):
+        setattr(self, box_name, QMessageBox())
+        self.__getattribute__(box_name).setIcon(icon)
+        self.__getattribute__(box_name).setText(text)
+        self.__getattribute__(box_name).setInformativeText(inf_text)
+        self.__getattribute__(box_name).setWindowTitle(title)
+        self.__getattribute__(box_name).setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
+
     def _init_ui(self):
+        self._add_message_box(box_name='bad_jpg_warning',
+                              text=f"Кажется в одном из .jpg файлов есть лишние пиксели!\n"
+                                   "(Или в разрешении есть нечетное число)",
+                              inf_text="",
+                              title=f"Ошибка работы ffmpeg!",
+                              icon=QMessageBox.Critical)
+
+        self._invoke_window('path_window')
+
         self._add_label(label_name='label_about_path',
                         text='Путь к папке с макетами:',
                         point=QPoint(10, 10))
@@ -65,7 +83,6 @@ class MainWindow(QMainWindow):
                         text='Количество print макетов: ',
                         point=QPoint(150, 60))
 
-        self.path_window = QMainWindow()
         self._add_button(button_name='choose_path_btn',
                          text='Выбрать директорию',
                          point=QPoint(10, 30),
@@ -80,21 +97,32 @@ class MainWindow(QMainWindow):
                          point=QPoint(350, 55),
                          on_click=self.complex_digital_render)
 
+    def _generate_paths(self, file_name: str):
+        size_dir_path = os.path.join(self.working_directory, (file_name.replace('.jpg', '')).replace('.ai', ''))
+        mp4_dir_path = os.path.join(size_dir_path, "Видео")
+        jpg_dir_path = os.path.join(size_dir_path, "JPG")
+        ai_dir_path = os.path.join(size_dir_path, "Исходники")
+        return SizeDirectory(jpg_dir_path, mp4_dir_path, ai_dir_path, size_dir_path)
+
+    def _generate_dirs(self, sd: SizeDirectory):
+        self.logger.debug("CREATING\n", sd.root, "\n", sd.mp4_dir_path, "\n", sd.jpg_dir_path, "\n", sd.ai_dir_path)
+        os.mkdir(sd.root)
+        os.mkdir(sd.mp4_dir_path)
+        os.mkdir(sd.jpg_dir_path)
+        os.mkdir(sd.ai_dir_path)
+
+    @staticmethod
+    def _file_is_img_or_ai(file_name):
+        return ".jpg" in file_name or '.ai' in file_name
+
     def create_directory(self, file_name) -> SizeDirectory:
-        if ".jpg" in file_name or '.ai' in file_name:
-            size_dir_path = os.path.join(self.working_directory, (file_name.replace('.jpg', '')).replace('.ai', ''))
-            mp4_dir_path = os.path.join(size_dir_path, "Видео")
-            jpg_dir_path = os.path.join(size_dir_path, "JPG")
-            ai_dir_path = os.path.join(size_dir_path, "Исходники")
-            logger.debug("CREATING\n", size_dir_path, "\n", mp4_dir_path, "\n", jpg_dir_path, "\n", ai_dir_path)
+        if self._file_is_img_or_ai(file_name):
+            sd = self._generate_paths(file_name)
             try:
-                os.mkdir(size_dir_path)
-                os.mkdir(mp4_dir_path)
-                os.mkdir(jpg_dir_path)
-                os.mkdir(ai_dir_path)
+                self._generate_dirs(sd)
             except FileExistsError:
-                pass
-            return SizeDirectory(jpg_dir_path, mp4_dir_path, ai_dir_path, size_dir_path)
+                self.logger.debug(f"Dirs for {file_name} already exists!")
+            return sd
 
     @staticmethod
     def check_size(size: tuple) -> bool:
@@ -103,14 +131,11 @@ class MainWindow(QMainWindow):
     def check_pixels(self, file_path, file_name):
         img_file = Image.open(fp=file_path)
         if self.check_size(img_file.size) is False:
-            warning = QMessageBox()
-            warning.setIcon(QMessageBox.Critical)
-            warning.setText(f"{file_name} кажется в .jpg файле есть лишние пиксели!\n"
-                            f"(Или в разрешении есть нечетное число)")
-            warning.setInformativeText(f"Путь к файлу: {file_path}")
-            warning.setWindowTitle(f"Лишние пиксели в {file_name}!")
-            warning.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
-            warning.exec_()
+            self.bad_jpg_warning.seText(f"{file_name} кажется в .jpg файле есть лишние пиксели!\n"
+                                        "(Или в разрешении есть нечетное число)")
+            self.bad_jpg_warning.setInformativeText(f"Путь к файлу: {file_path}")
+            self.bad_jpg_warning.setWindowTitle(f"Лишние пиксели в {file_name}!")
+            self.bad_jpg_warning.exec_()
 
     def complex_digital_render(self):
         for root, dirs, files in os.walk(self.working_directory):
@@ -122,12 +147,12 @@ class MainWindow(QMainWindow):
                     shutil.move(file_path, size_dir.jpg_dir_path)
                     render_attributes = self.parse_file_name(str(file_path))
                     input_file_path = os.path.join(size_dir.jpg_dir_path, file_name)
-                    size = FfmpegGenerator(input_file_path=input_file_path,
-                                           video_extension=render_attributes['extension'],
-                                           video_duration=render_attributes['duration'])
+                    ffmpeg_gen = FfmpegGenerator(input_file_path=input_file_path,
+                                                 video_extension=render_attributes['extension'],
+                                                 video_duration=render_attributes['duration'])
                     try:
-                        size.create_preview()
-                        size.render_video()
+                        ffmpeg_gen.create_preview()
+                        ffmpeg_gen.render_video()
                     except [FileExistsError, FileNotFoundError]:
                         pass
                 if '.ai' in file_name:
@@ -191,12 +216,14 @@ class MainWindow(QMainWindow):
 
 
 def window():
+    log.add('debug.log', format='{time} {level} {message}', level='DEBUG', rotation='10 KB', compression='zip')
     app = QApplication(sys.argv)
-    win = MainWindow()
+    win = MainWindow(log)
     win.setGeometry(1000, 400, 800, 200)
-    win.setWindowTitle("mp4_renderer")
+    win.setWindowTitle("LM Ad Render")
     win.show()
     sys.exit(app.exec_())
 
 
-window()
+if __name__ == "__main__":
+    window()
