@@ -4,9 +4,9 @@
 
 0. Prepare repository
 1. Enhance GUI:
-    1.1 Transfer GUI to .ui files
+    1. Transfer GUI to .ui files
 2. Enhance functionallity:
-    2.1 Work with .tiff files
+    1. Work with .tiff files
 
 ## This program has two basic functions:
 1. Render videos based on directory containing other directories with this structure:
