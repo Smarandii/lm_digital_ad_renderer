@@ -9,8 +9,9 @@ logger.add('debug.log', format='{time} {level} {message}', level='DEBUG', rotati
 
 
 class FfmpegGenerator:
-    def __init__(self, video_extension, video_duration, input_file_path):
-
+    def __init__(self, video_extension, video_duration, input_file_path, additional_attributes):
+        self.fade_in_fade_out = False
+        self.additional_attributes = additional_attributes
         self.jpg_path = pathlib.Path(input_file_path)
         self.video_extension = video_extension
         self.video_duration = video_duration
@@ -60,12 +61,7 @@ class FfmpegGenerator:
         # os.system(f'start /wait cmd /c "ffmpeg -y -loop 1 -i "{self.jpg_path}" -t {self.video_duration}
         # -pix_fmt yuv420p "{self.video_path}""')
 
-        logger.debug(f"Executing...\n"
-                     f"ffmpeg \n"
-                     f"-y -loop 1 \n"
-                     f"-i {self.jpg_path} \n"
-                     f"-t {self.video_duration} \n"
-                     f"-pix_fmt yuv420p {self.video_path} \n")
+        logger.debug(f"ffmpeg -y -loop 1 -i {self.jpg_path} -t {self.video_duration} -pix_fmt yuv420p {self.video_path}")
         subprocess.call(
             f"ffmpeg -y -loop 1 -i \"{self.jpg_path}\" -t {self.video_duration} -pix_fmt yuv420p \"{self.video_path}\"")
         if self.fade_in_fade_out:
@@ -74,6 +70,9 @@ class FfmpegGenerator:
             subprocess.call(f"ffmpeg -y -i \"{self.video_path}\" -vf \"fade=t=in:st=0:d=1\" \"{f_in_fname}\"")
             subprocess.call(f"ffmpeg -y -i \"{f_in_fname}\" -vf \"fade=t=out:st=4:d=1\" \"{f_in_f_out_fname}\"")
             os.remove(f_in_fname)
+        if self.video_extension == "wmv":
+            query = f"ffmpeg -y -loop 1 -i \"{self.jpg_path}\" {self.additional_attributes} -t {self.video_duration} -pix_fmt yuv420p \"{self.video_path}\""
+            subprocess.call(query)
 
 
 if __name__ == "__main__":

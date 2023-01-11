@@ -160,11 +160,14 @@ class MainWindow(QMainWindow):
 
     @staticmethod
     def parse_file_name(name: str) -> dict:
-        render_attributes = {'extension': 'mp4', 'duration': 5, 'fade': False}
+        render_attributes = {'extension': 'mp4', 'duration': 5, 'fade': False, 'additional_attributes': ""}
         if "avi" in name.lower():
             render_attributes['extension'] = 'avi'
         if 'sec' in name.lower():
             render_attributes['duration'] = name.split("sec")[0].strip().split(" ")[-1]
+        if 'wmv' in name.lower():
+            render_attributes['extension'] = 'wmv'
+            render_attributes['additional_attributes'] = "-qscale 2 -vcodec msmpeg4"
         if 'fade' in name.lower():
             render_attributes['fade'] = True
         return render_attributes
@@ -177,12 +180,13 @@ class MainWindow(QMainWindow):
                 render_attributes = self.parse_file_name(str(jpg_path))
                 size = FfmpegGenerator(input_file_path=jpg_path,
                                        video_extension=render_attributes['extension'],
-                                       video_duration=render_attributes['duration'])
+                                       video_duration=render_attributes['duration'],
+                                       additional_attributes=render_attributes['additional_attributes'])
                 try:
                     size.create_preview()
                     size.render_video()
-                except [FileExistsError, FileNotFoundError]:
-                    pass
+                except Exception as e:
+                    log.debug(e)
 
     def choose_path(self):
         self.working_directory = str(
@@ -226,4 +230,7 @@ def window():
 
 
 if __name__ == "__main__":
-    window()
+    try:
+        window()
+    except Exception as e:
+        log.debug(e)
