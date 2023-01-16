@@ -5,9 +5,11 @@
 0. Prepare repository
 1. Enhance GUI:
     1. Transfer GUI to .ui files
-2. Enhance functionallity:
+2. Enhance functionality:
     1. Work with .tiff files
+3. Code review/refactor
     - [x] 2. Add wmv format
+
 
 ## This program has two basic functions:
 1. Render videos based on directory containing other directories with this structure:
