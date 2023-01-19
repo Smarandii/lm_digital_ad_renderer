@@ -1,6 +1,9 @@
 .idea/
-main.spec
+*.spec
 venv/
 build/
 dist/
+ffmpeg/__pycache__/
+imagemagick/__pycache__/
 __pycache__/
+*.log
