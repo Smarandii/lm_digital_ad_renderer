@@ -11,7 +11,7 @@ import shutil
 from sys import exit, argv
 from os import path, mkdir, walk
 
-from loguru import logger as log, Logger
+from loguru import logger as log
 
 
 class SizeDirectory:
@@ -23,7 +23,7 @@ class SizeDirectory:
 
 
 class MainWindow(QMainWindow):
-    def __init__(self, logger: Logger):
+    def __init__(self, logger):
         super(MainWindow, self).__init__()
         self._logger = logger
         self.label_about_digital = None
@@ -173,6 +173,20 @@ class MainWindow(QMainWindow):
             self.bad_jpg_warning.setWindowTitle(f"Лишние пиксели в {file_name}!")
             self.bad_jpg_warning.exec_()
 
+    @staticmethod
+    def _get_render_options_digital(name: str) -> dict:
+        render_attributes = {'extension': 'mp4', 'duration': 5, 'fade': False, 'additional_attributes': ""}
+        if "avi" in name.lower():
+            render_attributes['extension'] = 'avi'
+        if 'sec' in name.lower():
+            render_attributes['duration'] = name.split("sec")[0].strip().split(" ")[-1]
+        if 'wmv' in name.lower():
+            render_attributes['extension'] = 'wmv'
+            render_attributes['additional_attributes'] = "-qscale 2 -vcodec msmpeg4"
+        if 'fade' in name.lower():
+            render_attributes['fade'] = True
+        return render_attributes
+
     def _complex_digital_render(self) -> None:
         for root, dirs, files in walk(self.working_directory):
             for file_name in files:
@@ -195,20 +209,6 @@ class MainWindow(QMainWindow):
                 if '.ai' in file_name:
                     shutil.move(file_path, size_dir.ai_dir_path)
 
-    @staticmethod
-    def _get_render_options_digital(name: str) -> dict:
-        render_attributes = {'extension': 'mp4', 'duration': 5, 'fade': False, 'additional_attributes': ""}
-        if "avi" in name.lower():
-            render_attributes['extension'] = 'avi'
-        if 'sec' in name.lower():
-            render_attributes['duration'] = name.split("sec")[0].strip().split(" ")[-1]
-        if 'wmv' in name.lower():
-            render_attributes['extension'] = 'wmv'
-            render_attributes['additional_attributes'] = "-qscale 2 -vcodec msmpeg4"
-        if 'fade' in name.lower():
-            render_attributes['fade'] = True
-        return render_attributes
-
     def render_digital(self) -> None:
         for root, dirs, files in walk(self.working_directory):
             if self._in_jpg_directory(root):
@@ -228,6 +228,7 @@ class MainWindow(QMainWindow):
     def get_full_size_and_short_size_from_path(self, path_string: str) -> tuple:
         escaped_working_dir = self.working_directory.replace("/", "\\")
         full_size = path_string.replace(escaped_working_dir, "")
+        full_size = full_size.replace("\\Исходник\\Illustrator 2020.eps", "")
         full_size = full_size.replace("\\Исходники\\Illustrator 2020.eps", "")
         full_size = full_size.replace("\\", "")
         return full_size.split(" ")[0], full_size
@@ -268,12 +269,20 @@ class MainWindow(QMainWindow):
     def _in_origin_directory(root: str) -> bool:
         return "Исходник" in root[-9::] or "исходник" in root[-9::]
 
+    @staticmethod
+    def _get_eps_file(files: list[pathlib.Path]) -> tuple[bool, int]:
+        for i in range(0, len(files)):
+            if ".eps" in files[i]:
+                return True, i
+        return False, -1
+
     def render_print(self):
         for root, dirs, files in walk(self.working_directory):
             if self._in_origin_directory(root):
-                if len(files) >= 2 and ".eps" in files[1]:
-                    self._logger.debug(f"Input file: {path.join(pathlib.Path(root), files[1])}")
-                    eps_path = path.join(pathlib.Path(root), files[1])
+                eps_file_in_directory, eps_file_index = self._get_eps_file(files)
+                if eps_file_in_directory:
+                    self._logger.debug(f"Input file: {path.join(pathlib.Path(root), files[eps_file_index])}")
+                    eps_path = path.join(pathlib.Path(root), files[eps_file_index])
                     render_options = self._get_render_options_print(str(eps_path))
                     im_processor = ImageMagickProcessor(input_file_path=eps_path, render_options=render_options)
                     try:
@@ -296,6 +305,6 @@ def window():
 if __name__ == "__main__":
     try:
         window()
-        input()
     except Exception as e:
         log.debug(e)
+        input()
