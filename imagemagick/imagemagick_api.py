@@ -10,12 +10,12 @@ class RenderOptions:
         self.directory = directory
         self.full_size = full_size
         self.output_directory = os.path.join(self.directory, "Принт")
-        self.output_file_name = f"{self.get_density() // 10}ppi lzw.tif"
+        self.output_file_name = f"{self._get_density() // 10}ppi lzw.tif"
         self.preview_file_name = self.full_size + ' — preview.jpg'
         self.preview_input_options = f"-colorspace cmyk -units pixelsperinch -density " \
-                                     f"{self.get_density() // 2}"
+                                     f"{self._get_density() // 2}"
 
-    def get_density(self):
+    def _get_density(self):
         return int(self.input_file_options.split(' ')[-1])
 
 
