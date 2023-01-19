@@ -2,12 +2,15 @@ import pathlib
 import shutil
 from PIL import Image
 from ffmpeg.ffmpeg_api import FfmpegGenerator
+from imagemagick.imagemagick_api import RenderOptions, ImageMagickProcessor
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import QPoint
 from PyQt5.QtWidgets import QApplication, QMainWindow, QFileDialog, QMessageBox
 import sys
 import os
 from loguru import logger as log
+
+# bug fix
 
 
 class SizeDirectory:
@@ -97,6 +100,11 @@ class MainWindow(QMainWindow):
                          point=QPoint(350, 55),
                          on_click=self.complex_digital_render)
 
+        self._add_button(button_name='render_print_btn',
+                         text='Рендер принта',
+                         point=QPoint(350, 80),
+                         on_click=self.render_print)
+
     def _generate_paths(self, file_name: str):
         size_dir_path = os.path.join(self.working_directory, (file_name.replace('.jpg', '')).replace('.ai', ''))
         mp4_dir_path = os.path.join(size_dir_path, "Видео")
@@ -172,21 +180,78 @@ class MainWindow(QMainWindow):
             render_attributes['fade'] = True
         return render_attributes
 
+    def get_full_size_and_short_size_from_path(self, path):
+        escaped_working_dir = self.working_directory.replace("/", "\\")
+        full_size = path.replace(escaped_working_dir, "")
+        full_size = full_size.replace("\\Исходники\\Illustrator 2020.eps", "")
+        full_size = full_size.replace("\\", "")
+        return full_size.split(" ")[0], full_size
+
+    @staticmethod
+    def ppi_table(size: str) -> int:
+        size = size.replace("х", "x")
+        length = int(size.split("x")[0])
+        width = int(size.split("x")[1])
+
+        if 2.5 < length / width:
+            return 150
+        if 1.75 < length / width < 2.5:
+            return 720
+        if 1.5 < length / width <= 1.75:
+            return 900
+        if 0.7 < length / width <= 1.5:
+            return 1100
+        if 0.5 < length / width <= 0.7:
+            return 900
+        if 0.3 < length / width <= 0.5:
+            return 1100
+
+    def get_render_options(self, path: str) -> RenderOptions:
+        directory = pathlib.Path(path.replace("Illustrator 2020.eps", "")).parent
+        short_size, full_size = self.get_full_size_and_short_size_from_path(path)
+        render_ppi = self.ppi_table(short_size)
+        return RenderOptions(input_file_options=f"-colorspace cmyk -units pixelsperinch -density {render_ppi}",
+                             output_file_options="-compress lzw -colorspace cmyk",
+                             directory=directory,
+                             full_size=full_size)
+
     def render_digital(self):
         for root, dirs, files in os.walk(self.working_directory):
-            if "JPG" == root[-3::]:
+            if self._in_jpg_directory(root):
                 jpg_path = os.path.join(pathlib.Path(root), files[0])
                 self.check_pixels(jpg_path, files[0])
                 render_attributes = self.parse_file_name(str(jpg_path))
-                size = FfmpegGenerator(input_file_path=jpg_path,
-                                       video_extension=render_attributes['extension'],
-                                       video_duration=render_attributes['duration'],
-                                       additional_attributes=render_attributes['additional_attributes'])
+                ffmpeg_gen = FfmpegGenerator(input_file_path=jpg_path,
+                                             video_extension=render_attributes['extension'],
+                                             video_duration=render_attributes['duration'],
+                                             additional_attributes=render_attributes['additional_attributes'])
                 try:
-                    size.create_preview()
-                    size.render_video()
+                    ffmpeg_gen.create_preview()
+                    ffmpeg_gen.render_video()
                 except Exception as e:
                     log.debug(e)
+
+    @staticmethod
+    def _in_origin_directory(root):
+        return "Исходники" == root[-9::]
+
+    @staticmethod
+    def _in_jpg_directory(root):
+        return "JPG" == root[-3::]
+
+    def render_print(self):
+        for root, dirs, files in os.walk(self.working_directory):
+            if self._in_origin_directory(root):
+                if len(files) >= 2 and ".eps" in files[1]:
+                    log.debug(f"Input file: {os.path.join(pathlib.Path(root), files[1])}")
+                    eps_path = os.path.join(pathlib.Path(root), files[1])
+                    render_options = self.get_render_options(str(eps_path))
+                    im_processor = ImageMagickProcessor(input_file_path=eps_path, render_options=render_options)
+                    try:
+                        im_processor.render()
+                        im_processor.render_preview()
+                    except Exception as e:
+                        log.debug(e)
 
     def choose_path(self):
         self.working_directory = str(
@@ -202,25 +267,20 @@ class MainWindow(QMainWindow):
         self.label_about_digital.adjustSize()
 
     def calculate_statistic(self):
-
+        self.stats = {'digitals': 0,
+                      'prints': 0}
         for root, dirs, files in os.walk(self.working_directory):
-            for directory in dirs:
-                if directory.upper() == "JPG":
+            for file in files:
+                if ".ai" in file:
                     self.stats['digitals'] += 1
-                if directory.capitalize() == "Принт":
+                if '.eps' in file:
                     self.stats['prints'] += 1
-            if self.stats['digitals'] == 0:
-                for file in files:
-                    if ".ai" in file:
-                        self.stats['digitals'] += 1
-                    if '.eps' in file:
-                        self.stats['prints'] += 1
-                        self.stats['digitals'] -= 1
+                    self.stats['digitals'] -= 1
         self.display_statistic()
 
 
 def window():
-    log.add('debug.log', format='{time} {level} {message}', level='DEBUG', rotation='10 KB', compression='zip')
+    log.add('debug.log', format='{time} {level} {message}', level='DEBUG', rotation='10 MB', compression='zip')
     app = QApplication(sys.argv)
     win = MainWindow(log)
     win.setGeometry(1000, 400, 800, 200)
@@ -232,5 +292,6 @@ def window():
 if __name__ == "__main__":
     try:
         window()
+        input()
     except Exception as e:
         log.debug(e)

@@ -1,6 +1,6 @@
-from __init__ import logger, pathlib, os, shutil, subprocess, argparse
+from ffmpeg import logger, pathlib, os, shutil, subprocess, argparse
 
-logger.add('debug.log', format='{time} {level} {message}', level='DEBUG', rotation='10 KB', compression='zip')
+logger.add('debug.log', format='{time} {level} {message}', level='DEBUG', rotation='10 MB', compression='zip')
 
 
 class FfmpegGenerator:
@@ -34,7 +34,7 @@ class FfmpegGenerator:
 
     def create_preview(self):
         logger.debug(f"COPY: {self.jpg_path} to the {self.DIR_PATH.parent.__str__()}")
-        self. delete_old_preview(self.DIR_PATH.parent)
+        self.delete_old_preview(self.DIR_PATH.parent)
         shutil.copy(self.jpg_path, self.DIR_PATH.parent)
 
         logger.debug(f"RENAME: {os.path.join(self.DIR_PATH.parent, self.name).__str__()} to the "
