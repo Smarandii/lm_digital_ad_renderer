@@ -11,7 +11,7 @@
     - [x] 2. Add wmv format
 
 
-## This program has two basic functions:
+## What this program can do:
 1. Render videos based on directory containing other directories with this structure:
 
 _Root directory name: Image size
@@ -20,8 +20,27 @@ Example:
 ```
 720x360 -
 	 |
-	  - Исходники
-	  - JPG
+	  - Исходники -
+	 |             |
+	 |              - Illustrator 2020.ai
+	  - JPG -
+	 |       |
+	 |        - 720x360.jpg
 	  - Видео
 ```
 2. Render and catoligize videos based on directory containing .jpg & .ai files
+3. Render .tif files based on directory containing other directories with this structure:
+
+_Root directory name: Image size
+Inside of root directory are directories (Принт, Исходники)_
+Example:
+```
+1200x1800 -
+	   |
+	    - Исходники - 
+	   |             |
+	   |              - Illustrator 2020.ai
+	   |              - Illustrator 2020.eps
+	   |
+	    - Принт
+```
