@@ -6,7 +6,7 @@
 1. Enhance GUI:
     1. Transfer GUI to .ui files
 2. Enhance functionality:
-    1. Work with .tiff files
+    - [x] 1. Work with .tiff files
 3. Code review/refactor
     - [x] 2. Add wmv format
 
