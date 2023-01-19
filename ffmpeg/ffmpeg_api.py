@@ -1,14 +1,9 @@
-import pathlib
-import shutil
-import argparse
-import os
-import subprocess
-from loguru import logger
+from ffmpeg import logger, pathlib, os, shutil, subprocess
 
-logger.add('debug.log', format='{time} {level} {message}', level='DEBUG', rotation='10 KB', compression='zip')
+logger.add('debug.log', format='{time} {level} {message}', level='DEBUG', rotation='10 MB', compression='zip')
 
 
-class FfmpegGenerator:
+class FfmpegProcessor:
     def __init__(self, video_extension, video_duration, input_file_path, additional_attributes):
         self.fade_in_fade_out = False
         self.additional_attributes = additional_attributes
@@ -73,40 +68,3 @@ class FfmpegGenerator:
         if self.video_extension == "wmv":
             query = f"ffmpeg -y -loop 1 -i \"{self.jpg_path}\" {self.additional_attributes} -t {self.video_duration} -pix_fmt yuv420p \"{self.video_path}\""
             subprocess.call(query)
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Grinding images helper"
-    )
-
-    parser.add_argument(
-        "-i", type=str,
-        help="Input file path"
-    )
-
-    parser.add_argument(
-        "-e", type=str,
-        help="The extension of the video to create without dot, example — (avi, mp4, etc.)"
-    )
-    parser.add_argument(
-        "-t", type=str,
-        help="The duration of the video to create in secs, example — (5, 10, etc.)"
-    )
-    args = parser.parse_args()
-
-    if args.e is None:
-        args.e = "mp4"
-    if args.t is None:
-        args.t = "5"
-    size = FfmpegGenerator(video_extension=args.e, video_duration=args.t, input_file_path=args.i)
-
-    try:
-        size.create_preview()
-        size.render_video()
-    except FileExistsError as e:
-        logger.debug("Операция создания превью прервана, так как файл preview уже существует!")
-        os.remove(os.path.join(size.DIR_PATH.parent, size.name))
-        size.render_video()
-    except Exception as e:
-        print(e)
