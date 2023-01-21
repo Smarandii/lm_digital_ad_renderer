@@ -8,7 +8,17 @@
 2. Enhance functionality:
     - [x] 1. Work with .tiff files
 3. Code review/refactor
+    - [x] 1. Add checks for installed ffmpeg and imagemagick 
     - [x] 2. Add wmv format
+
+## To compile .exe file execute this command:
+```commandline
+pyinstaller '.\LM AD Render.py' --icon .\assets\photo_2021-05-11_11-55-45.ico --onefile 
+```
+
+## To run compiled .exe you will need to:
+1. Install ffmpeg and add "bin" folder in PATH environment variable
+2. Install imagemagick and add "ImageMagick" folder in PATH environment variable
 
 
 ## What this program can do:
