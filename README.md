@@ -7,6 +7,8 @@
     1. Transfer GUI to .ui files
 2. Enhance functionality:
     - [x] 1. Work with .tiff files
+    - [x] 2. Add support of wmv videos
+    - [ ] 3. Add dependencies check
 3. Code review/refactor
     - [x] 1. Add checks for installed ffmpeg and imagemagick 
     - [x] 2. Add wmv format
