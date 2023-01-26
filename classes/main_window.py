@@ -1,15 +1,5 @@
-from PIL import Image
-from PyQt5 import QtWidgets
-from PyQt5.QtCore import QPoint
-
-from PyQt5.QtWidgets import QMainWindow, QFileDialog, QMessageBox
-
-from ffmpeg.ffmpeg_api import FfmpegProcessor
-from imagemagick.imagemagick_api import RenderOptions, ImageMagickProcessor
-import pathlib
-import shutil
-
-from os import path, mkdir, walk
+from classes import QMainWindow, uic, QtWidgets, QPoint, QMessageBox, QFileDialog, walk, path, mkdir, Image, pathlib, \
+    shutil, FfmpegProcessor, RenderOptions, ImageMagickProcessor
 
 
 class SizeDirectory:
@@ -23,6 +13,7 @@ class SizeDirectory:
 class MainWindow(QMainWindow):
     def __init__(self, logger):
         super(MainWindow, self).__init__()
+        uic.loadUi(f"{pathlib.Path('').parent.absolute()}\\ui\\MainWindow.ui", self)
         self._logger = logger
         self.label_about_digital = None
         self.label_about_print = None

@@ -1,18 +1,5 @@
 # lm_digital_ad_renderer
 
-## Tasks for project:
-
-0. Prepare repository
-1. Enhance GUI:
-    1. Transfer GUI to .ui files
-2. Enhance functionality:
-    - [x] 1. Work with .tiff files
-    - [x] 2. Add support of wmv videos
-    - [x] 3. Add dependencies check
-3. Code review/refactor
-    - [x] 1. Add checks for installed ffmpeg and imagemagick 
-    - [x] 2. Add wmv format
-
 ## To compile .exe file execute this command:
 ```commandline
 pyinstaller '.\LM AD Render.py' --icon .\assets\photo_2021-05-11_11-55-45.ico --onefile 
