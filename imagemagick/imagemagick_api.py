@@ -1,18 +1,20 @@
+import pathlib
+
 from imagemagick import os, subprocess, logger
 
 logger.add('debug.log', format='{time} {level} {message}', level='DEBUG', rotation='10 MB', compression='zip')
 
 
 class RenderOptions:
-    def __init__(self, input_file_options, output_file_options, directory, full_size):
+    def __init__(self, input_file_options, output_file_options, directory: pathlib.Path, full_size, size_name):
         self.input_file_options = input_file_options
         self.output_file_options = output_file_options
         self.directory = directory
         self.full_size = full_size
-        self.output_directory = os.path.join(self.directory, "Принт")
+        self.output_directory = self.directory.joinpath("Принт")
         self.output_file_name = f"{self.get_density() // 10}ppi lzw.tif"
-        self.preview_file_name = self.full_size + ' — preview.jpg'
-        self.preview_input_options = f"-colorspace cmyk -units pixelsperinch -density " \
+        self.preview_file_name = size_name + ' — preview.png'
+        self.preview_input_options = f"-colorspace rgb -density " \
                                      f"{self.get_density() // 2}"
 
     def get_density(self):

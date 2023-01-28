@@ -1,4 +1,4 @@
-from classes import QMainWindow, uic, QtWidgets, QPoint, QMessageBox, QFileDialog, walk, path, mkdir, Image, pathlib, \
+from classes import QMainWindow, uic, QtWidgets, QMessageBox, QFileDialog, walk, path, mkdir, Image, pathlib, \
     shutil, FfmpegProcessor, RenderOptions, ImageMagickProcessor
 
 
@@ -44,7 +44,7 @@ class MainWindow(QMainWindow):
     def _init_table(self):
         self.table_of_sizes.setColumnCount(2)
         self.table_of_sizes.setHorizontalHeaderLabels(
-            ["Рамер макета (шxв)\nНАЗВАНИЕ ПАПКИ", "DPI / Длительность"])
+            ["Размер макета (шxв)\nНАЗВАНИЕ ПАПКИ", "DPI / Длительность"])
 
         self.table_of_sizes.setColumnWidth(0, 300)
         self.table_of_sizes.setColumnWidth(1, 200)
@@ -79,16 +79,19 @@ class MainWindow(QMainWindow):
                 if '.eps' in file:
                     return self.PRINT
 
-    def _add_to_render_list(self, directory_name, full_dir_path, size_type, render_options):
+    def _add_to_render_list(self, directory_name, full_dir_path: pathlib.Path, size_type, render_options):
         self.render_list[size_type].append(
             {
                 "size_name": directory_name,
                 "full_dir_path": full_dir_path,
+                "full_eps_file_path": full_dir_path.joinpath("Исходники").joinpath(directory_name + ".eps"),
+                "full_jpg_file_path": full_dir_path.joinpath("JPG").joinpath(directory_name + ".jpg"),
                 "render_options": render_options
+
             }
         )
 
-    def _add_to_table(self, size_type, directory_name, full_dir_path, i):
+    def _add_to_table(self, size_type, directory_name, full_dir_path: pathlib.Path, i):
 
         if size_type == self.DIGITAL:
             render_options = self._get_render_options_digital(directory_name)
@@ -99,7 +102,7 @@ class MainWindow(QMainWindow):
             self.table_of_sizes.setItem(i, 1, duration_item)
 
         if size_type == self.PRINT:
-            render_options = self._get_render_options_print(str(full_dir_path))
+            render_options = self._get_render_options_print(str(full_dir_path.joinpath("Исходники").joinpath(directory_name + ".eps")))
             self._add_to_render_list(directory_name, full_dir_path, size_type, render_options)
             name_item = QtWidgets.QTableWidgetItem(directory_name)
             self.table_of_sizes.setItem(i, 0, name_item)
@@ -239,14 +242,15 @@ class MainWindow(QMainWindow):
 
     def _get_full_size_and_short_size_from_path(self, path_string: str) -> tuple:
         escaped_working_dir = self.working_directory.replace("/", "\\")
-        full_size = path_string.replace(escaped_working_dir, "")
-        full_size = full_size.replace("\\Исходник\\Illustrator 2020.eps", "")
-        full_size = full_size.replace("\\Исходники\\Illustrator 2020.eps", "")
-        full_size = full_size.replace("\\", "")
-        return full_size.split(" ")[0], full_size
+        short_size = path_string.replace(escaped_working_dir, "")
+        short_size = short_size.replace("\\Исходник\\Illustrator 2020.eps", "")
+        short_size = short_size.replace("\\Исходники\\Illustrator 2020.eps", "")
+        short_size = short_size.replace("\\Исходники\\", "")
+        short_size = short_size.replace("\\", "")
+        return short_size, pathlib.Path(escaped_working_dir, short_size, short_size + ".eps")
 
     @staticmethod
-    def ppi_table(size: str) -> int:
+    def dpi_table(size: str) -> int:
         size = size.replace("х", "x")
         length = int(size.split("x")[0])
         width = int(size.split("x")[1])
@@ -254,28 +258,29 @@ class MainWindow(QMainWindow):
         if 2.5 < length / width:
             return 150
         if 1.75 < length / width < 2.5:
-            return 720
+            return 460
         if 1.5 < length / width <= 1.75:
-            return 900
+            return 460
         if 0.7 < length / width <= 1.5:
-            return 1100
+            return 720
         if 0.5 < length / width <= 0.7:
-            return 900
+            return 960
         if 0.3 < length / width <= 0.5:
-            return 1100
+            return 960
 
     @staticmethod
     def _in_jpg_directory(root: str) -> bool:
         return "JPG" == root[-3::] or "jpg" == root[-3::]
 
     def _get_render_options_print(self, file_path: str) -> RenderOptions:
-        directory = pathlib.Path(file_path.replace("Illustrator 2020.eps", "")).parent
-        short_size, full_size = self._get_full_size_and_short_size_from_path(file_path)
-        render_ppi = self.ppi_table(short_size)
-        return RenderOptions(input_file_options=f"-colorspace cmyk -units pixelsperinch -density {render_ppi}",
-                             output_file_options="-compress lzw -colorspace cmyk",
+        directory = pathlib.Path(file_path).parent.parent
+        size_name = str(directory).split("\\")[-1]
+        render_dpi = self.dpi_table(size_name)
+        return RenderOptions(input_file_options=f"-colorspace cmyk -density {render_dpi}",
+                             output_file_options="-depth 8 -compress lzw -colorspace cmyk",
                              directory=directory,
-                             full_size=full_size)
+                             full_size=file_path,
+                             size_name=size_name)
 
     @staticmethod
     def _in_origin_directory(root: str) -> bool:
@@ -293,21 +298,17 @@ class MainWindow(QMainWindow):
         self.progress_bar.show()
         self.progress_bar.setRange(0, len(self.render_list[self.PRINT]) * 2)
         progress_bar_counter = 0
-        for root, dirs, files in walk(self.working_directory):
-            if self._in_origin_directory(root):
-                eps_file_in_directory, eps_file_index = self._get_eps_file(files)
-                if eps_file_in_directory:
-                    self._logger.debug(f"Input file: {path.join(pathlib.Path(root), files[eps_file_index])}")
-                    eps_path = path.join(pathlib.Path(root), files[eps_file_index])
-                    render_options = self._get_render_options_print(str(eps_path))
-                    im_processor = ImageMagickProcessor(input_file_path=eps_path, render_options=render_options)
-                    progress_bar_counter += 1
-                    self.progress_bar.setValue(progress_bar_counter)
-                    try:
-                        im_processor.render()
-                        im_processor.render_preview()
-                        progress_bar_counter += 1
-                        self.progress_bar.setValue(progress_bar_counter)
-                    except Exception as exc:
-                        self._logger.debug(str(exc.args))
+        for size in self.render_list[self.PRINT]:
+            self._logger.debug(f"Input file: {size['full_eps_file_path']}")
+            im_processor = ImageMagickProcessor(input_file_path=size['full_eps_file_path'],
+                                                render_options=size['render_options'])
+            progress_bar_counter += 1
+            self.progress_bar.setValue(progress_bar_counter)
+            try:
+                im_processor.render()
+                im_processor.render_preview()
+                progress_bar_counter += 1
+                self.progress_bar.setValue(progress_bar_counter)
+            except Exception as exc:
+                self._logger.debug(str(exc.args))
         self.progress_bar.hide()
