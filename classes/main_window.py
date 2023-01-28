@@ -11,37 +11,24 @@ class SizeDirectory:
 
 
 class MainWindow(QMainWindow):
+    DIGITAL = "digital"
+    PRINT = "print"
+
     def __init__(self, logger):
         super(MainWindow, self).__init__()
         uic.loadUi(f"{pathlib.Path('').parent.absolute()}\\ui\\MainWindow.ui", self)
-        self._logger = logger
-        self.label_about_digital = None
-        self.label_about_print = None
-        self.working_directory = None
-        self.bad_jpg_warning = None
-        self.path_window = None
-        self.label_path = None
+        self.progress_bar.setVisible(False)
+        self.progress_bar.setValue(0)
+        self.render_print_btn.clicked.connect(self._render_print)
+        self.render_digital_btn.clicked.connect(self._render_digital)
+        self.complex_render_digital_btn.clicked.connect(self._complex_digital_render)
+        self.choose_path_btn.clicked.connect(self._choose_path)
+        self._init_table()
         self._init_ui()
-        self.stats = {'digitals': 0,
-                      'prints': 0}
-
-    def _add_label(self, label_name: str, text: str = None, point: QPoint = None) -> None:
-        setattr(self, label_name, QtWidgets.QLabel(self))
-        if text:
-            self.__getattribute__(label_name).setText(text)
-            self.__getattribute__(label_name).adjustSize()
-        if point:
-            self.__getattribute__(label_name).move(point)
-
-    def _add_button(self, button_name: str, text: str = None, point: QPoint = None, on_click=None) -> None:
-        setattr(self, button_name, QtWidgets.QPushButton(self))
-        if text:
-            self.__getattribute__(button_name).setText(text)
-            self.__getattribute__(button_name).adjustSize()
-        if point:
-            self.__getattribute__(button_name).move(point)
-        if on_click:
-            self.__getattribute__(button_name).clicked.connect(on_click)
+        self._logger = logger
+        self.bad_jpg_warning = None
+        self.render_list = {self.PRINT: [],
+                            self.DIGITAL: []}
 
     def _invoke_window(self, window_name: str) -> None:
         setattr(self, window_name, QMainWindow())
