@@ -252,6 +252,10 @@ class MainWindow(QMainWindow):
     @staticmethod
     def dpi_table(size: str) -> int:
         size = size.replace("х", "x")
+        if "—" in size:
+            size = size.split("—")[0]
+        if "-" in size:
+            size = size.split("-")[0]
         length = int(size.split("x")[0])
         width = int(size.split("x")[1])
 
