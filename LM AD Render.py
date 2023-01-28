@@ -7,7 +7,7 @@ from loguru import logger as log
 def start_program(app: QApplication):
     log.add('debug.log', format='{time} {level} {message}', level='DEBUG', rotation='10 MB', compression='zip')
     win = MainWindow(log)
-    win.setGeometry(1000, 400, 800, 200)
+    win.setGeometry(1000, 400, 930, 550)
     win.setWindowTitle("LM Ad Render")
     win.show()
     exit(app.exec_())

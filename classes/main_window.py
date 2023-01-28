@@ -11,37 +11,24 @@ class SizeDirectory:
 
 
 class MainWindow(QMainWindow):
+    DIGITAL = "digital"
+    PRINT = "print"
+
     def __init__(self, logger):
         super(MainWindow, self).__init__()
         uic.loadUi(f"{pathlib.Path('').parent.absolute()}\\ui\\MainWindow.ui", self)
-        self._logger = logger
-        self.label_about_digital = None
-        self.label_about_print = None
-        self.working_directory = None
-        self.bad_jpg_warning = None
-        self.path_window = None
-        self.label_path = None
+        self.progress_bar.setVisible(False)
+        self.progress_bar.setValue(0)
+        self.render_print_btn.clicked.connect(self._render_print)
+        self.render_digital_btn.clicked.connect(self._render_digital)
+        self.complex_render_digital_btn.clicked.connect(self._complex_digital_render)
+        self.choose_path_btn.clicked.connect(self._choose_path)
+        self._init_table()
         self._init_ui()
-        self.stats = {'digitals': 0,
-                      'prints': 0}
-
-    def _add_label(self, label_name: str, text: str = None, point: QPoint = None) -> None:
-        setattr(self, label_name, QtWidgets.QLabel(self))
-        if text:
-            self.__getattribute__(label_name).setText(text)
-            self.__getattribute__(label_name).adjustSize()
-        if point:
-            self.__getattribute__(label_name).move(point)
-
-    def _add_button(self, button_name: str, text: str = None, point: QPoint = None, on_click=None) -> None:
-        setattr(self, button_name, QtWidgets.QPushButton(self))
-        if text:
-            self.__getattribute__(button_name).setText(text)
-            self.__getattribute__(button_name).adjustSize()
-        if point:
-            self.__getattribute__(button_name).move(point)
-        if on_click:
-            self.__getattribute__(button_name).clicked.connect(on_click)
+        self._logger = logger
+        self.bad_jpg_warning = None
+        self.render_list = {self.PRINT: [],
+                            self.DIGITAL: []}
 
     def _invoke_window(self, window_name: str) -> None:
         setattr(self, window_name, QMainWindow())
@@ -54,7 +41,17 @@ class MainWindow(QMainWindow):
         self.__getattribute__(box_name).setWindowTitle(title)
         self.__getattribute__(box_name).setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
 
+    def _init_table(self):
+        self.table_of_sizes.setColumnCount(2)
+        self.table_of_sizes.setHorizontalHeaderLabels(
+            ["Рамер макета (шxв)\nНАЗВАНИЕ ПАПКИ", "DPI / Длительность"])
+
+        self.table_of_sizes.setColumnWidth(0, 300)
+        self.table_of_sizes.setColumnWidth(1, 200)
+
     def _init_ui(self) -> None:
+
+        self._invoke_window('path_window')
         self._add_message_box(box_name='bad_jpg_warning',
                               text=f"Кажется в одном из .jpg файлов есть лишние пиксели!\n"
                                    "(Или в разрешении есть нечетное число)",
@@ -62,65 +59,60 @@ class MainWindow(QMainWindow):
                               title=f"Ошибка работы ffmpeg!",
                               icon=QMessageBox.Critical)
 
-        self._invoke_window('path_window')
-
-        self._add_label(label_name='label_about_path',
-                        text='Путь к папке с макетами:',
-                        point=QPoint(10, 10))
-        self._add_label(label_name='label_path',
-                        text='',
-                        point=QPoint(150, 10))
-
-        self._add_label(label_name='label_about_digital',
-                        text='Количество digital макетов: ',
-                        point=QPoint(150, 30))
-        self._add_label(label_name='label_about_print',
-                        text='Количество print макетов: ',
-                        point=QPoint(150, 60))
-
-        self._add_button(button_name='choose_path_btn',
-                         text='Выбрать директорию',
-                         point=QPoint(10, 30),
-                         on_click=self._choose_path)
-        self._add_button(button_name='render_digital_btn',
-                         text='Рендер digital',
-                         point=QPoint(350, 30),
-                         on_click=self.render_digital)
-
-        self._add_button(button_name='complex_render_digital_btn',
-                         text='Рендер + Каталогизация digital',
-                         point=QPoint(350, 55),
-                         on_click=self._complex_digital_render)
-
-        self._add_button(button_name='render_print_btn',
-                         text='Рендер принта',
-                         point=QPoint(350, 80),
-                         on_click=self.render_print)
-
     def _choose_path(self):
         self.working_directory = str(
             QFileDialog.getExistingDirectory(self.path_window, "Выберите директорию с размерами"))
         self.label_path.setText(self.working_directory)
         self.label_path.adjustSize()
-        self._calculate_statistic()
+        self._find_sizes_to_display()
 
-    def _display_statistic(self):
-        self.label_about_print.setText('Количество print макетов: ' + str(self.stats['prints']))
-        self.label_about_print.adjustSize()
-        self.label_about_digital.setText('Количество digital макетов: ' + str(self.stats['digitals']))
-        self.label_about_digital.adjustSize()
-
-    def _calculate_statistic(self):
-        self.stats = {'digitals': 0,
-                      'prints': 0}
-        for root, dirs, files in walk(self.working_directory):
+    def _define_size_type(self, full_dir_path):
+        for root, dirs, files in walk(full_dir_path):
             for file in files:
-                if ".ai" in file:
-                    self.stats['digitals'] += 1
+                if ".jpg" in file:
+                    return self.DIGITAL
                 if '.eps' in file:
-                    self.stats['prints'] += 1
-                    self.stats['digitals'] -= 1
-        self._display_statistic()
+                    return self.PRINT
+
+    def _add_to_render_list(self, directory_name, full_dir_path, size_type, render_options):
+        self.render_list[size_type].append(
+            {
+                "size_name": directory_name,
+                "full_dir_path": full_dir_path,
+                "render_options": render_options
+            }
+        )
+
+    def _add_to_table(self, size_type, directory_name, full_dir_path, i):
+
+        if size_type == self.DIGITAL:
+            render_options = self._get_render_options_digital(directory_name)
+            self._add_to_render_list(directory_name, full_dir_path, size_type, render_options)
+            name_item = QtWidgets.QTableWidgetItem(directory_name)
+            self.table_of_sizes.setItem(i, 0, name_item)
+            duration_item = QtWidgets.QTableWidgetItem(str(render_options['duration']) + " sec")
+            self.table_of_sizes.setItem(i, 1, duration_item)
+
+        if size_type == self.PRINT:
+            render_options = self._get_render_options_print(str(full_dir_path))
+            self._add_to_render_list(directory_name, full_dir_path, size_type, render_options)
+            name_item = QtWidgets.QTableWidgetItem(directory_name)
+            self.table_of_sizes.setItem(i, 0, name_item)
+            dpi = render_options.get_density() // 10
+            dpi_item = QtWidgets.QTableWidgetItem(str(dpi) + " dpi")
+            self.table_of_sizes.setItem(i, 1, dpi_item)
+
+    def _insert_sizes_in_table(self, dirs):
+        self.table_of_sizes.setRowCount(len(dirs))
+        for i, directory_name in enumerate(dirs):
+            full_dir_path = pathlib.Path(self.working_directory, directory_name)
+            size_type = self._define_size_type(full_dir_path)
+            self._add_to_table(size_type, directory_name, full_dir_path, i)
+
+    def _find_sizes_to_display(self):
+        for root, dirs, files in walk(self.working_directory):
+            self._insert_sizes_in_table(dirs)
+            break
 
     def _generate_paths(self, file_name: str) -> SizeDirectory:
         size_dir_path = path.join(self.working_directory, (file_name.replace('.jpg', '')).replace('.ai', ''))
@@ -198,7 +190,7 @@ class MainWindow(QMainWindow):
                 if '.ai' in file_name:
                     shutil.move(file_path, size_dir.ai_dir_path)
 
-    def render_digital(self) -> None:
+    def _render_digital(self) -> None:
         for root, dirs, files in walk(self.working_directory):
             if self._in_jpg_directory(root):
                 jpg_path = path.join(pathlib.Path(root), files[0])
@@ -214,7 +206,7 @@ class MainWindow(QMainWindow):
                 except Exception as exc:
                     self._logger.debug(str(exc.args))
 
-    def get_full_size_and_short_size_from_path(self, path_string: str) -> tuple:
+    def _get_full_size_and_short_size_from_path(self, path_string: str) -> tuple:
         escaped_working_dir = self.working_directory.replace("/", "\\")
         full_size = path_string.replace(escaped_working_dir, "")
         full_size = full_size.replace("\\Исходник\\Illustrator 2020.eps", "")
@@ -247,7 +239,7 @@ class MainWindow(QMainWindow):
 
     def _get_render_options_print(self, file_path: str) -> RenderOptions:
         directory = pathlib.Path(file_path.replace("Illustrator 2020.eps", "")).parent
-        short_size, full_size = self.get_full_size_and_short_size_from_path(file_path)
+        short_size, full_size = self._get_full_size_and_short_size_from_path(file_path)
         render_ppi = self.ppi_table(short_size)
         return RenderOptions(input_file_options=f"-colorspace cmyk -units pixelsperinch -density {render_ppi}",
                              output_file_options="-compress lzw -colorspace cmyk",
@@ -265,7 +257,7 @@ class MainWindow(QMainWindow):
                 return True, i
         return False, -1
 
-    def render_print(self):
+    def _render_print(self) -> None:
         for root, dirs, files in walk(self.working_directory):
             if self._in_origin_directory(root):
                 eps_file_in_directory, eps_file_index = self._get_eps_file(files)
