@@ -114,9 +114,19 @@ class MainWindow(QMainWindow):
             size_type = self._define_size_type(full_dir_path)
             self._add_to_table(size_type, directory_name, full_dir_path, i)
 
+    def _complex_insert_sizes_in_table(self, files):
+        self.table_of_sizes.setRowCount(len(files))
+        size_type = self.DIGITAL
+        for i, file_name in enumerate(files):
+            full_dir_path = pathlib.Path(self.working_directory, file_name)
+            self._add_to_table(size_type, file_name, full_dir_path, i)
+
     def _find_sizes_to_display(self):
         for root, dirs, files in walk(self.working_directory):
-            self._insert_sizes_in_table(dirs)
+            if dirs:
+                self._insert_sizes_in_table(dirs)
+            elif files:
+                self._complex_insert_sizes_in_table(files)
             break
 
     def _generate_paths(self, file_name: str) -> SizeDirectory:
@@ -175,6 +185,10 @@ class MainWindow(QMainWindow):
 
     def _complex_digital_render(self) -> None:
         for root, dirs, files in walk(self.working_directory):
+            self.progress_bar.setValue(0)
+            self.progress_bar.show()
+            self.progress_bar.setRange(0, len(files) // 2)
+            progress_bar_counter = 0
             for file_name in files:
                 size_dir = self._create_directory(file_name)
                 file_path = path.join(pathlib.Path(root), file_name)
@@ -187,6 +201,8 @@ class MainWindow(QMainWindow):
                                                  video_extension=render_attributes['extension'],
                                                  video_duration=render_attributes['duration'],
                                                  additional_attributes=render_attributes['additional_attributes'])
+                    progress_bar_counter += 1
+                    self.progress_bar.setValue(progress_bar_counter)
                     try:
                         ffmpeg_gen.create_preview()
                         ffmpeg_gen.render_video()
@@ -194,12 +210,15 @@ class MainWindow(QMainWindow):
                         pass
                 if '.ai' in file_name:
                     shutil.move(file_path, size_dir.ai_dir_path)
+            self.progress_bar.hide()
+            break
+        self._find_sizes_to_display()
 
     def _render_digital(self) -> None:
         self.progress_bar.setValue(0)
         self.progress_bar.show()
         self.progress_bar.setRange(0, len(self.render_list[self.DIGITAL]))
-        i = 0
+        progress_bar_counter = 0
         for root, dirs, files in walk(self.working_directory):
             if self._in_jpg_directory(root):
                 jpg_path = path.join(pathlib.Path(root), files[0])
@@ -209,8 +228,8 @@ class MainWindow(QMainWindow):
                                              video_extension=render_attributes['extension'],
                                              video_duration=render_attributes['duration'],
                                              additional_attributes=render_attributes['additional_attributes'])
-                i += 1
-                self.progress_bar.setValue(i)
+                progress_bar_counter += 1
+                self.progress_bar.setValue(progress_bar_counter)
                 try:
                     ffmpeg_gen.create_preview()
                     ffmpeg_gen.render_video()
@@ -273,7 +292,7 @@ class MainWindow(QMainWindow):
         self.progress_bar.setValue(0)
         self.progress_bar.show()
         self.progress_bar.setRange(0, len(self.render_list[self.PRINT]) * 2)
-        i = 0
+        progress_bar_counter = 0
         for root, dirs, files in walk(self.working_directory):
             if self._in_origin_directory(root):
                 eps_file_in_directory, eps_file_index = self._get_eps_file(files)
@@ -282,13 +301,13 @@ class MainWindow(QMainWindow):
                     eps_path = path.join(pathlib.Path(root), files[eps_file_index])
                     render_options = self._get_render_options_print(str(eps_path))
                     im_processor = ImageMagickProcessor(input_file_path=eps_path, render_options=render_options)
-                    i += 1
-                    self.progress_bar.setValue(i)
+                    progress_bar_counter += 1
+                    self.progress_bar.setValue(progress_bar_counter)
                     try:
                         im_processor.render()
                         im_processor.render_preview()
-                        i += 1
-                        self.progress_bar.setValue(i)
+                        progress_bar_counter += 1
+                        self.progress_bar.setValue(progress_bar_counter)
                     except Exception as exc:
                         self._logger.debug(str(exc.args))
         self.progress_bar.hide()
