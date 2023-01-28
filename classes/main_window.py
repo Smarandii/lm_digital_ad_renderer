@@ -17,7 +17,7 @@ class MainWindow(QMainWindow):
     def __init__(self, logger):
         super(MainWindow, self).__init__()
         uic.loadUi(f"{pathlib.Path('').parent.absolute()}\\ui\\MainWindow.ui", self)
-        self.progress_bar.setVisible(False)
+        self.progress_bar.hide()
         self.progress_bar.setValue(0)
         self.render_print_btn.clicked.connect(self._render_print)
         self.render_digital_btn.clicked.connect(self._render_digital)
@@ -68,6 +68,11 @@ class MainWindow(QMainWindow):
 
     def _define_size_type(self, full_dir_path):
         for root, dirs, files in walk(full_dir_path):
+            for dir_ in dirs:
+                if "Принт" in dir_:
+                    return self.PRINT
+                if "Видео" in dir_:
+                    return self.DIGITAL
             for file in files:
                 if ".jpg" in file:
                     return self.DIGITAL
@@ -191,6 +196,10 @@ class MainWindow(QMainWindow):
                     shutil.move(file_path, size_dir.ai_dir_path)
 
     def _render_digital(self) -> None:
+        self.progress_bar.setValue(0)
+        self.progress_bar.show()
+        self.progress_bar.setRange(0, len(self.render_list[self.DIGITAL]))
+        i = 0
         for root, dirs, files in walk(self.working_directory):
             if self._in_jpg_directory(root):
                 jpg_path = path.join(pathlib.Path(root), files[0])
@@ -200,11 +209,14 @@ class MainWindow(QMainWindow):
                                              video_extension=render_attributes['extension'],
                                              video_duration=render_attributes['duration'],
                                              additional_attributes=render_attributes['additional_attributes'])
+                i += 1
+                self.progress_bar.setValue(i)
                 try:
                     ffmpeg_gen.create_preview()
                     ffmpeg_gen.render_video()
                 except Exception as exc:
                     self._logger.debug(str(exc.args))
+        self.progress_bar.hide()
 
     def _get_full_size_and_short_size_from_path(self, path_string: str) -> tuple:
         escaped_working_dir = self.working_directory.replace("/", "\\")
@@ -251,13 +263,17 @@ class MainWindow(QMainWindow):
         return "Исходник" in root[-9::] or "исходник" in root[-9::]
 
     @staticmethod
-    def _get_eps_file(files: list[pathlib.Path]) -> tuple[bool, int]:
+    def _get_eps_file(files: list[str]) -> tuple[bool, int]:
         for i in range(0, len(files)):
             if ".eps" in files[i]:
                 return True, i
         return False, -1
 
     def _render_print(self) -> None:
+        self.progress_bar.setValue(0)
+        self.progress_bar.show()
+        self.progress_bar.setRange(0, len(self.render_list[self.PRINT]) * 2)
+        i = 0
         for root, dirs, files in walk(self.working_directory):
             if self._in_origin_directory(root):
                 eps_file_in_directory, eps_file_index = self._get_eps_file(files)
@@ -266,8 +282,13 @@ class MainWindow(QMainWindow):
                     eps_path = path.join(pathlib.Path(root), files[eps_file_index])
                     render_options = self._get_render_options_print(str(eps_path))
                     im_processor = ImageMagickProcessor(input_file_path=eps_path, render_options=render_options)
+                    i += 1
+                    self.progress_bar.setValue(i)
                     try:
                         im_processor.render()
                         im_processor.render_preview()
+                        i += 1
+                        self.progress_bar.setValue(i)
                     except Exception as exc:
                         self._logger.debug(str(exc.args))
+        self.progress_bar.hide()
