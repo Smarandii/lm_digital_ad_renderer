@@ -4,7 +4,7 @@ logger.add('debug.log', format='{time} {level} {message}', level='DEBUG', rotati
 
 
 class FfmpegProcessor:
-    def __init__(self, video_extension, video_duration, input_file_path, additional_attributes):
+    def __init__(self, video_extension, video_duration, input_file_path: str, additional_attributes):
         self.fade_in_fade_out = False
         self.additional_attributes = additional_attributes
         self.jpg_path = pathlib.Path(input_file_path)
@@ -19,7 +19,7 @@ class FfmpegProcessor:
             self.name_with_preview = self.name_without_extension + " — Gallery — preview.jpg"
         else:
             self.name_with_preview = self.name_without_extension + " — preview.jpg"
-        self.video_path = os.path.join(self.DIR_PATH.parent, "Видео", self.video_name)
+        self.video_path = os.path.join(self.DIR_PATH, "video", self.video_name)
         if "fade" in input_file_path:
             self.fade_in_fade_out = True
 

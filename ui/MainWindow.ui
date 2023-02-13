@@ -118,7 +118,7 @@
      </font>
     </property>
     <property name="text">
-     <string>Рендер + Каталогизация digital</string>
+     <string>Рендер из папки с jpg</string>
     </property>
    </widget>
    <widget class="QPushButton" name="render_print_btn">
