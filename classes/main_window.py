@@ -3,14 +3,6 @@ from classes import QMainWindow, uic, QtWidgets, QMessageBox, QFileDialog, walk,
 from render_options.print_render_options import PrintRenderOptions
 
 
-class SizeDirectory:
-    def __init__(self, jpg, mp4, ai, root):
-        self.jpg_dir_path = jpg
-        self.mp4_dir_path = mp4
-        self.ai_dir_path = ai
-        self.root = root
-
-
 class MainWindow(QMainWindow, PrintRenderOptions):
     DIGITAL = "digital"
     PRINT = "print"
@@ -171,16 +163,17 @@ class MainWindow(QMainWindow, PrintRenderOptions):
             if self._format_of_file_is_jpg(image['size_name']):
                 self._check_pixels(image['absolute_path'], image['size_name'])
                 render_attributes = self._get_render_options_digital(str(image['absolute_path']))
-                # try:
-                ffmpeg_gen = FfmpegProcessor(input_file_path=str(image['absolute_path']),
-                                             video_extension=render_attributes['extension'],
-                                             video_duration=render_attributes['duration'],
-                                             additional_attributes=render_attributes['additional_attributes'])
-                ffmpeg_gen.render_video()
-                self._add_progress_to_progress_bar()
-                #except Exception as e:
-                    #print(e)
-                   #pass
+                try:
+                    ffmpeg_gen = FfmpegProcessor(input_file_path=str(image['absolute_path']),
+                                                 video_extension=render_attributes['extension'],
+                                                 video_duration=render_attributes['duration'],
+                                                 additional_attributes=render_attributes['additional_attributes'])
+                    ffmpeg_gen.render_video()
+                    self._add_progress_to_progress_bar()
+                except Exception as e:
+                    print(e)
+                    input()
+                    pass
         self.progress_bar.hide()
 
     def _get_files_from_working_directory(self):

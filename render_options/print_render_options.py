@@ -21,3 +21,12 @@ class PrintRenderOptions:
             return 960
         if 0.3 < length / width <= 0.5:
             return 960
+
+
+if __name__ == "__main__":
+    print(PrintRenderOptions.dpi_table("6000x3000"))
+    print(PrintRenderOptions.dpi_table("1200x1800"))
+    print(PrintRenderOptions.dpi_table("3700x2700"))
+    print(PrintRenderOptions.dpi_table("1400x3000"))
+    print(PrintRenderOptions.dpi_table("12000x3000"))
+
