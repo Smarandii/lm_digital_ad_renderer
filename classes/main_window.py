@@ -1,15 +1,28 @@
-from classes import QMainWindow, uic, QtWidgets, QMessageBox, QFileDialog, walk, path, mkdir, Image, pathlib, \
-    shutil, FfmpegProcessor, RenderOptions, ImageMagickProcessor
-from render_options.print_render_options import PrintRenderOptions
+from classes import \
+    QMainWindow, \
+    QtWidgets, \
+    QMessageBox, \
+    QFileDialog, \
+    uic, \
+    walk, \
+    path, \
+    mkdir, \
+    pathlib, \
+    Image, \
+    FfmpegProcessor, \
+    RenderOptions, \
+    ImageMagickProcessor, \
+    PrintRenderOptions
 
 
 class MainWindow(QMainWindow, PrintRenderOptions):
     DIGITAL = "digital"
     PRINT = "print"
+    PATH_TO_UI_FILE = f"{pathlib.Path('').parent.absolute()}\\ui\\MainWindow.ui"
 
     def __init__(self, logger):
         super(MainWindow, self).__init__()
-        uic.loadUi(f"{pathlib.Path('').parent.absolute()}\\ui\\MainWindow.ui", self)
+        uic.loadUi(self.PATH_TO_UI_FILE, self)
         self.progress_bar.hide()
         self.progress_bar.setValue(0)
         self.render_print_btn.clicked.connect(self._render_print)
