@@ -15,16 +15,19 @@ def start_program(app: QApplication):
 
 def dependencies_installed(app: QApplication):
     import subprocess
-    from classes.missing_dependencies_window import MissingDependenciesWindow
     try:
         output_ffmpeg = subprocess.check_output(["ffmpeg", "-version"])
         output_imagemagick = subprocess.check_output(["magick", "-version"])
         return True
     except WindowsError:
-        window = MissingDependenciesWindow()
-        window.show()
-        app.exec_()
         return False
+
+
+def show_missing_dependencies_window(app):
+    from classes.missing_dependencies_window import MissingDependenciesWindow
+    window = MissingDependenciesWindow()
+    window.show()
+    app.exec_()
 
 
 if __name__ == "__main__":
@@ -32,6 +35,8 @@ if __name__ == "__main__":
         app = QApplication([])
         if dependencies_installed(app):
             start_program(app)
+        else:
+            show_missing_dependencies_window(app)
     except Exception as e:
         log.debug(e)
         input()

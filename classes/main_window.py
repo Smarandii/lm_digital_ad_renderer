@@ -15,7 +15,7 @@ from classes import \
     PrintRenderOptions
 
 
-class MainWindow(QMainWindow, PrintRenderOptions):
+class MainWindow(QMainWindow):
     DIGITAL = "digital"
     PRINT = "print"
     PATH_TO_UI_FILE = f"{pathlib.Path('').parent.absolute()}\\ui\\MainWindow.ui"
@@ -240,7 +240,7 @@ class MainWindow(QMainWindow, PrintRenderOptions):
     def _get_render_options_print(self, file_path: str) -> RenderOptions:
         directory = pathlib.Path(file_path).parent.parent
         size_name = str(directory).split("\\")[-1]
-        render_dpi = self.dpi_table(size_name)
+        render_dpi = PrintRenderOptions.dpi_table(size_name)
         return RenderOptions(input_file_options=f"-colorspace cmyk -density {render_dpi}",
                              output_file_options="-depth 8 -compress lzw -colorspace cmyk",
                              directory=directory,
