@@ -13,7 +13,7 @@ def start_program(app: QApplication):
     exit(app.exec_())
 
 
-def dependencies_installed(app: QApplication):
+def dependencies_installed():
     import subprocess
     try:
         output_ffmpeg = subprocess.check_output(["ffmpeg", "-version"])
@@ -33,7 +33,7 @@ def show_missing_dependencies_window(app):
 if __name__ == "__main__":
     try:
         app = QApplication([])
-        if dependencies_installed(app):
+        if dependencies_installed():
             start_program(app)
         else:
             show_missing_dependencies_window(app)
